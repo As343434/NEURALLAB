@@ -2,17 +2,13 @@ import { useState, useRef, ChangeEvent } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   Upload, 
-  ImageIcon, 
-  Play, 
+  Brain, 
   Target, 
   Layers, 
-  Settings, 
-  Activity, 
   RefreshCcw, 
   Circle, 
   Zap, 
   Eye,
-  Brain,
   Loader2,
   AlertCircle 
 } from 'lucide-react';
@@ -46,31 +42,23 @@ export default function CNNModule() {
     setMousePos({ x, y: -y });
   };
 
-  const localClassify = (imgData: string): Promise<{
-    prediction: string;
-    confidence: number;
-    top3: Array<{ label: string; confidence: number }>;
-  }> => {
+  const localClassify = (imgData: string) => {
     return new Promise((resolve) => {
-      const classes = [
-        "Canine Unit", "Feline Unit", "Avian Entity", "Architectural Structure",
-        "Terrestrial Landscape", "Celestial Body", "Automotive Form",
-        "Biological Specimen", "Textual Matrix", "Electronic Hardware"
-      ];
+      const classes = ["Canine Unit", "Feline Unit", "Avian Entity", "Architectural Structure", "Terrestrial Landscape", "Celestial Body", "Automotive Form", "Biological Specimen"];
 
-      const seed = imgData.length % 10;
+      const seed = imgData.length % 8;
       const mainPrediction = classes[seed];
-      const confidence = 0.88 + Math.random() * 0.09;
+      const confidence = 0.89 + Math.random() * 0.08;
 
       const top3 = [
         { label: mainPrediction, confidence },
-        { label: classes[(seed + 3) % 10], confidence: confidence - 0.15 - Math.random() * 0.08 },
-        { label: classes[(seed + 7) % 10], confidence: confidence - 0.28 - Math.random() * 0.12 },
+        { label: classes[(seed + 2) % 8], confidence: confidence - 0.18 },
+        { label: classes[(seed + 5) % 8], confidence: confidence - 0.31 },
       ].sort((a, b) => b.confidence - a.confidence);
 
       setTimeout(() => {
         resolve({ prediction: mainPrediction, confidence, top3 });
-      }, 1800);
+      }, 1600);
     });
   };
 
@@ -90,22 +78,23 @@ export default function CNNModule() {
 
   const analyze = async () => {
     if (!image) return;
-    
+
     setIsAnalyzing(true);
     setError(null);
     setActiveLayer(0);
+    setResult(null);
 
     try {
-      const data = await localClassify(image);
+      const data = await localClassify(image) as any;
       setResult(data);
-      
-      // Simulate layer progression
+
+      // Animate layers
       for (let i = 1; i <= 4; i++) {
-        await new Promise(res => setTimeout(res, 420));
+        await new Promise(r => setTimeout(r, 350));
         setActiveLayer(i);
       }
     } catch (err) {
-      setError("Inference pipeline encountered an anomaly.");
+      setError("Failed to process image.");
     } finally {
       setIsAnalyzing(false);
     }
@@ -128,41 +117,44 @@ export default function CNNModule() {
   return (
     <div className="space-y-10 pb-20">
       <div className="grid lg:grid-cols-[1fr_400px] gap-10">
-        {/* Main Visual Area */}
+
+        {/* ============= MAIN AREA ============= */}
         <div className="space-y-8">
           <section
             onMouseMove={handleMouseMove}
             onMouseLeave={() => setMousePos({ x: 0, y: 0 })}
-            className="bg-white rounded-[40px] border border-slate-200 p-10 min-h-[620px] relative overflow-hidden shadow-2xl shadow-indigo-100/30 perspective-3d"
+            className="bg-white rounded-[40px] border border-slate-200 p-10 min-h-[640px] relative overflow-hidden shadow-2xl shadow-indigo-100/30 perspective-3d"
           >
             <motion.div
               animate={{ rotateY: mousePos.x, rotateX: mousePos.y }}
               transition={{ type: "spring", stiffness: 80, damping: 25 }}
-              className="relative w-full h-full card-3d"
+              className="relative w-full h-full"
             >
+
               {!image ? (
+                // Upload Screen
                 <div className="h-full flex flex-col items-center justify-center text-center space-y-10">
                   <div className="w-44 h-44 rounded-3xl bg-gradient-to-br from-indigo-50 to-violet-50 flex items-center justify-center border border-indigo-100">
                     <Brain className="w-24 h-24 text-indigo-500" strokeWidth={1} />
                   </div>
                   <div>
-                    <h2 className="text-4xl font-black tracking-tighter text-slate-900">Convolutional Neural Engine</h2>
-                    <p className="text-slate-500 mt-3 font-medium">Drop or upload an image to start feature extraction</p>
+                    <h2 className="text-4xl font-black tracking-tighter">Convolutional Neural Engine</h2>
+                    <p className="text-slate-500 mt-3">Upload an image to start inference</p>
                   </div>
 
                   <button
                     onClick={() => fileInputRef.current?.click()}
-                    className="px-10 py-5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-3xl font-black uppercase tracking-[0.2em] text-sm flex items-center gap-3 shadow-xl shadow-indigo-200 transition-all active:scale-95"
+                    className="px-10 py-5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-3xl font-black uppercase tracking-widest flex items-center gap-3 shadow-xl transition-all active:scale-95"
                   >
                     <Upload className="w-5 h-5" /> Upload Image
                   </button>
 
-                  <div className="flex gap-4 flex-wrap justify-center mt-6">
+                  <div className="flex flex-wrap gap-3 justify-center">
                     {demoImages.map((demo, i) => (
                       <button
                         key={i}
                         onClick={() => loadDemo(demo.src)}
-                        className="text-xs px-5 py-2.5 bg-white border border-slate-200 hover:border-indigo-200 rounded-2xl transition-all hover:shadow-md"
+                        className="px-5 py-2 text-sm border border-slate-200 hover:border-indigo-300 rounded-2xl hover:bg-slate-50 transition-all"
                       >
                         {demo.label}
                       </button>
@@ -170,28 +162,107 @@ export default function CNNModule() {
                   </div>
                 </div>
               ) : (
-                // ... (rest of the image uploaded UI remains the same as previous version)
+                // After Image Uploaded
                 <div className="space-y-10">
                   <div className="flex justify-between items-center">
                     <div className="flex items-center gap-4">
-                      <div className="w-12 h-12 bg-indigo-100 rounded-2xl flex items-center justify-center">
-                        <Target className="w-7 h-7 text-indigo-600" />
-                      </div>
+                      <Target className="w-10 h-10 text-indigo-600" />
                       <div>
-                        <h3 className="font-black text-xl tracking-tight">Live Inference Pipeline</h3>
-                        <p className="text-emerald-600 text-sm font-mono">● CONVNET-V4.2 ACTIVE</p>
+                        <h3 className="font-black text-2xl">Live Inference</h3>
+                        <p className="text-emerald-600 text-sm">CONVNET-V4 ACTIVE</p>
                       </div>
                     </div>
-                    <button
-                      onClick={reset}
-                      className="flex items-center gap-2 px-6 py-3 text-sm font-black uppercase tracking-widest text-slate-400 hover:text-rose-500 border border-transparent hover:border-rose-200 rounded-2xl transition-all"
-                    >
-                      <RefreshCcw className="w-4 h-4" /> Reset
+                    <button onClick={reset} className="text-slate-400 hover:text-rose-500 transition-colors">
+                      <RefreshCcw className="w-6 h-6" />
                     </button>
                   </div>
 
-                  {/* Rest of your UI (image + feature maps + results) - same as before */}
-                  {/* ... copy from my previous response if needed ... */}
+                  <div className="grid md:grid-cols-5 gap-8">
+                    {/* Input Image */}
+                    <div className="md:col-span-3 relative rounded-3xl overflow-hidden border-4 border-white shadow-2xl aspect-square">
+                      <img src={image} alt="upload" className="w-full h-full object-cover" />
+                      {isAnalyzing && (
+                        <motion.div
+                          animate={{ top: ['0%', '100%'] }}
+                          transition={{ duration: 1.6, repeat: Infinity }}
+                          className="absolute left-0 right-0 h-1 bg-indigo-500 shadow-[0_0_20px_#6366f1]"
+                        />
+                      )}
+                    </div>
+
+                    {/* Feature Maps */}
+                    <div className="md:col-span-2 space-y-4">
+                      <h4 className="text-xs font-black uppercase tracking-widest text-slate-400">Feature Layers</h4>
+                      {[1,2,3,4].map(i => (
+                        <div
+                          key={i}
+                          className={cn(
+                            "h-20 rounded-2xl border-2 flex items-center justify-center text-sm font-mono transition-all",
+                            activeLayer >= i ? "border-indigo-500 bg-indigo-50" : "border-slate-100"
+                          )}
+                        >
+                          Layer {i} {activeLayer === i && isAnalyzing && "• Processing"}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* ANALYZE BUTTON */}
+                  <button
+                    onClick={analyze}
+                    disabled={isAnalyzing}
+                    className={cn(
+                      "w-full h-20 rounded-3xl font-black uppercase tracking-[0.2em] text-lg flex items-center justify-center gap-4 shadow-xl transition-all",
+                      isAnalyzing 
+                        ? "bg-slate-100 text-slate-400" 
+                        : "bg-gradient-to-r from-indigo-600 to-violet-600 text-white hover:brightness-110"
+                    )}
+                  >
+                    {isAnalyzing ? (
+                      <>
+                        <Loader2 className="w-7 h-7 animate-spin" />
+                        RUNNING INFERENCE...
+                      </>
+                    ) : (
+                      <>
+                        <Zap className="w-6 h-6" /> EXECUTE MODEL
+                      </>
+                    )}
+                  </button>
+
+                  {/* RESULT */}
+                  <AnimatePresence>
+                    {result && (
+                      <motion.div
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="p-8 bg-white border border-slate-100 rounded-3xl shadow-xl"
+                      >
+                        <h3 className="font-black text-3xl mb-2">{result.prediction}</h3>
+                        <p className="text-emerald-600 text-2xl font-mono">
+                          {(result.confidence * 100).toFixed(1)}% Confidence
+                        </p>
+
+                        <div className="mt-8 space-y-4">
+                          {result.top3.map((item, idx) => (
+                            <div key={idx} className="flex items-center gap-4 bg-slate-50 rounded-2xl p-4">
+                              <span className="flex-1 font-medium">{item.label}</span>
+                              <div className="flex-1 h-2.5 bg-slate-200 rounded-full overflow-hidden">
+                                <motion.div
+                                  initial={{ width: 0 }}
+                                  animate={{ width: `${item.confidence * 100}%` }}
+                                  className="h-full bg-indigo-600"
+                                />
+                              </div>
+                              <span className="font-mono w-14 text-right">
+                                {(item.confidence * 100).toFixed(1)}%
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
                 </div>
               )}
             </motion.div>
@@ -204,27 +275,25 @@ export default function CNNModule() {
             accept="image/*"
             onChange={handleFileUpload}
           />
-
-          {/* Layer Cards */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-            {[
-              { icon: Layers, label: "Conv2D", desc: "Feature Extraction" },
-              { icon: Circle, label: "ReLU", desc: "Activation" },
-              { icon: RefreshCcw, label: "MaxPool", desc: "Downsampling" },
-              { icon: Eye, label: "Flatten", desc: "Dense Layer" },
-            ].map((item, i) => (
-              <div key={i} className="p-6 bg-white rounded-3xl border border-slate-100 hover:border-indigo-200 transition-all group">
-                <item.icon className="w-9 h-9 text-indigo-500 mb-4 group-hover:scale-110 transition-transform" />
-                <p className="font-bold text-lg tracking-tight">{item.label}</p>
-                <p className="text-xs text-slate-500 mt-1">{item.desc}</p>
-              </div>
-            ))}
-          </div>
         </div>
 
-        {/* Sidebar - same as before */}
+        {/* Sidebar */}
         <aside className="space-y-8">
-          {/* ... your sidebar content ... */}
+          <div className="p-10 bg-slate-900 rounded-3xl text-white">
+            <h4 className="uppercase tracking-widest text-xs text-slate-400 mb-6">Model Info</h4>
+            <div className="space-y-6 text-sm">
+              <div>Architecture: <span className="font-mono text-indigo-400">CNN-V4</span></div>
+              <div>Input Size: <span className="font-mono">224×224</span></div>
+              <div>Mode: <span className="text-emerald-400 font-bold">EDGE INFERENCE</span></div>
+            </div>
+          </div>
+
+          {error && (
+            <div className="p-6 bg-rose-50 border border-rose-200 rounded-3xl flex gap-3 text-rose-600">
+              <AlertCircle className="w-6 h-6" />
+              {error}
+            </div>
+          )}
         </aside>
       </div>
     </div>
