@@ -1,0 +1,6 @@
+{
+  "name": "Neural Lab Pro",
+  "description": "A high-performance neural network research suite with local edge inference, real-time computer vision, and architectural simulations.",
+  "requestFramePermissions": ["camera"],
+  "majorCapabilities": []
+}
